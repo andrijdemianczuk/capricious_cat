@@ -1,8 +1,8 @@
 class Hello:
 
-    def __init__(self):
+    def __init__(self, name:str = "Databricks"):
         pass
-        self.greeting = "Hello Andrij !"
+        self.greeting = f"Hello {name}!"
 
     def sayHi(self) -> str:
         return self.greeting
