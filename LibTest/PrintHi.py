@@ -4,5 +4,6 @@ class Hello:
         pass
         self.greeting = f"Hello {name}!"
 
+
     def sayHi(self) -> str:
         return self.greeting
