@@ -110,6 +110,16 @@ dew_func = dew.DewFn()
 
 # COMMAND ----------
 
+# MAGIC %md
+# MAGIC Question for MNP: Do the encrypted cols need to be decrypted or can they simply be redacted?
+# MAGIC 
+# MAGIC We have 3 options:
+# MAGIC 1. Replace with nulls
+# MAGIC 2. Do it with sha1 using an inline UDF (since the library is out of scope this won't work via api call)
+# MAGIC 3. Do it the same way I did for the HLS demo (needs to be revisited)
+
+# COMMAND ----------
+
 # DBTITLE 1,Load, redact and write the feed
 #read the initial dataframe - Finished
 rawDf = dew_func.read_stream_raw_autoloader(spark=spark, autoloader_config=autoloader_config, rawPath=rawPath)
@@ -144,9 +154,7 @@ if piiColumns != "null_string":
   pii_cols = piiColumns.replace(' ', '').split(',')
 
   for c in pii_cols:
-    df = bronzeReadyDf.withColumn(c, coalesce(c, lit('null'))).withColumn(c, encrypt_col(c))
-
-  display(df)
+    bronzeReadyDf = bronzeReadyDf.withColumn(c, coalesce(c, lit('null'))).withColumn(c, encrypt_col(c))
 
 # COMMAND ----------
 
