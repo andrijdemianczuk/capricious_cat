@@ -35,48 +35,45 @@ piiColumns = dbutils.widgets.get("piiColumns")
 # DBTITLE 1,System imports
 import sys
 import os
+import datetime as dt
+import hashlib
 
 from delta.tables import *
 from  pyspark.sql.functions import *
-import datetime as dt
+from pyspark.sql.types import StringType, IntegerType, StructType, StructField
 
-# COMMAND ----------
-
-# DBTITLE 1,Add repo location
+#Add the repo to the sys path and import the module
 sys.path.append(os.path.abspath(lib_loc))
-
-# COMMAND ----------
-
-# DBTITLE 1,Import our custom library
 import dew
 
 # COMMAND ----------
 
-# DBTITLE 1,Create an instance for the dew function based off the derived class
-dew_func = dew.DewFn()
+# DBTITLE 1,DEBUG - reload the module during development
+# import importlib
+# importlib.reload(dew)
+
+# dew_func = dew.DewFn()
 
 # COMMAND ----------
 
-# DBTITLE 1,DEBUG - reload the module during development
-import importlib
-importlib.reload(dew)
-
+# DBTITLE 1,Instance the derived class
+#Create a new instance of the derived class which inherits the base class functions too
 dew_func = dew.DewFn()
 
 # COMMAND ----------
 
 # DBTITLE 1,DEBUG - test dataframe
-columns = ["language","users_count"]
-data = [("Java", "20000"), ("Python", "100000"), ("Scala", "3000")]
+# columns = ["language","users_count"]
+# data = [("Java", "20000"), ("Python", "100000"), ("Scala", "3000")]
 
-dfFromData2 = spark.createDataFrame(data).toDF(*columns)
+# dfFromData2 = spark.createDataFrame(data).toDF(*columns)
 
 # COMMAND ----------
 
 # DBTITLE 1,DEBUG - test to see if the dataframe reference is being passed
-bronzeReadyDf = dew_func.add_bronze_metadata_cols(spark, dfFromData2)
+# bronzeReadyDf = dew_func.add_bronze_metadata_cols(spark, dfFromData2)
 
-display(bronzeReadyDf)
+# display(bronzeReadyDf)
 
 # COMMAND ----------
 
@@ -88,13 +85,40 @@ bronzeCheckpoint       = basePath + f"/bronze/{targetPath}/{targetDataset}/_chec
 
 # COMMAND ----------
 
+# DBTITLE 1,Set once the autoloader configuration as a dictionary
+autoloader_config = {
+  "cloudFiles.format": rawPath,
+  "cloudFiles.connectionString": dbutils.secrets.get(scope="AzureKeyVault",key="DatabricksAutoloaderSasKeyConnectionString"),
+  "cloudFiles.resourceGroup": dbutils.secrets.get(scope="AzureKeyVault",key="AnalyticsPlatformResourceGroup"),
+  "cloudFiles.subscriptionId": dbutils.secrets.get(scope="AzureKeyVault",key="SubscriptionId"),
+  "cloudFiles.tenantId": dbutils.secrets.get(scope="AzureKeyVaultAAD",key="DatabricksAdlsTenantId"),
+  "cloudFiles.clientId": dbutils.secrets.get(scope="AzureKeyVaultAAD",key="DatabricksAdlsAppId"),
+  "cloudFiles.clientSecret": dbutils.secrets.get(scope="AzureKeyVaultAAD",key="DatabricksAdlsSecret"), 
+  "cloudFiles.includeExistingFiles": "true",
+  "cloudFiles.schemaLocation": bronzePath,
+  "cloudFiles.inferColumnTypes": "false",
+  "cloudFiles.schemaEvolutionMode": "rescue",
+  "cloudFiles.useNotifications": "true"
+  }
+
+# COMMAND ----------
+
+import importlib
+importlib.reload(dew)
+
+dew_func = dew.DewFn()
+
+# COMMAND ----------
+
 # DBTITLE 1,Load, redact and write the feed
-#read the initial dataframe
-rawDf = dew_func.read_stream_raw_autoloader()
+#read the initial dataframe - Finished
+rawDf = dew_func.read_stream_raw_autoloader(spark=spark, autoloader_config=autoloader_config, rawPath=rawPath)
 
 #PII Columns are coming from the widgets -->
 if piiColumns != "null_string":
-  rawDf = dew_func.encrypt_cols()
+
+  rawDf = dew_func.nullout_cols(piiColumns=piiColumns, df=bronzeReadyDf)
+  display(rawDf)
 
 #Add metadata cols - Finished
 bronzeReadyDf = dew_func.add_bronze_metadata_cols(spark=spark, df=rawDf)
@@ -104,26 +128,25 @@ dew_func.write_stream_bronze_delta_trigger_once()
 
 # COMMAND ----------
 
-# read raw csv's into autoloader stream
-# rawDf = read_stream_raw_autoloader(spark = spark
-#                                    , fileFormat = "csv"
-#                                    , rawPath = rawPath
-#                                    , bronzePath = bronzePath
-#                                    , includeExisting = "true"
-#                                    , inferTypes = "false"
-#                                    , schemaMode = "rescue")
+# DBTITLE 1,#Option 2 if we *need* the UDF 
+#NOTE: Only *if* the encrypted cols need to be decrypted otherwise we'd simply redact the fields (which can't be undone.)
 
-# COMMAND ----------
+@udf("String")
+def encrypt_col(pii_col):
+  
+  sha_value = hashlib.sha1(pii_col.encode()).hexdigest()
+  
+  return sha_value
 
-## encrypt values in any pii columns
-# if piiColumns != "null_string":
-  # rawDf = encrypt_cols(spark, piiColumns, rawDf)
+#PII Columns are coming from the widgets -->
+if piiColumns != "null_string":
 
-# COMMAND ----------
+  pii_cols = piiColumns.replace(' ', '').split(',')
 
-# add metadata columns
-# bronzeReadyDf = add_bronze_metadata_cols(spark = spark
-#                                          , df = rawDf)
+  for c in pii_cols:
+    df = bronzeReadyDf.withColumn(c, coalesce(c, lit('null'))).withColumn(c, encrypt_col(c))
+
+  display(df)
 
 # COMMAND ----------
 
