@@ -48,32 +48,9 @@ import dew
 
 # COMMAND ----------
 
-# DBTITLE 1,DEBUG - reload the module during development
-# import importlib
-# importlib.reload(dew)
-
-# dew_func = dew.DewFn()
-
-# COMMAND ----------
-
 # DBTITLE 1,Instance the derived class
 #Create a new instance of the derived class which inherits the base class functions too
 dew_func = dew.DewFn()
-
-# COMMAND ----------
-
-# DBTITLE 1,DEBUG - test dataframe
-# columns = ["language","users_count"]
-# data = [("Java", "20000"), ("Python", "100000"), ("Scala", "3000")]
-
-# dfFromData2 = spark.createDataFrame(data).toDF(*columns)
-
-# COMMAND ----------
-
-# DBTITLE 1,DEBUG - test to see if the dataframe reference is being passed
-# bronzeReadyDf = dew_func.add_bronze_metadata_cols(spark, dfFromData2)
-
-# display(bronzeReadyDf)
 
 # COMMAND ----------
 
@@ -100,14 +77,6 @@ autoloader_config = {
   "cloudFiles.schemaEvolutionMode": "rescue",
   "cloudFiles.useNotifications": "true"
   }
-
-# COMMAND ----------
-
-# DBTITLE 1,DEBUG - reload the module during development
-# import importlib
-# importlib.reload(dew)
-
-# dew_func = dew.DewFn()
 
 # COMMAND ----------
 
