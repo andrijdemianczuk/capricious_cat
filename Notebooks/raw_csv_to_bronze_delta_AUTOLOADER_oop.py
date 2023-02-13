@@ -103,57 +103,62 @@ autoloader_config = {
 
 # COMMAND ----------
 
-import importlib
-importlib.reload(dew)
+# DBTITLE 1,DEBUG - reload the module during development
+# import importlib
+# importlib.reload(dew)
 
-dew_func = dew.DewFn()
+# dew_func = dew.DewFn()
 
 # COMMAND ----------
 
-# DBTITLE 1,Load, redact and write the feed
-#read the initial dataframe - Finished
+# MAGIC %md
+# MAGIC Question for MNP: Do the encrypted cols need to be decrypted or can they simply be redacted?
+# MAGIC 
+# MAGIC We have 3 options:
+# MAGIC 1. Replace with nulls
+# MAGIC 2. Do it with sha1 using an inline UDF (since the library is out of scope this won't work via api call)
+# MAGIC 3. Do it the same way I did for the HLS demo (needs to be revisited)
+
+# COMMAND ----------
+
+# DBTITLE 1,#Option1 Load, redact and write the feed - using nullout in lieu of sha1 per row
+#Read stream
 rawDf = dew_func.read_stream_raw_autoloader(spark=spark, autoloader_config=autoloader_config, rawPath=rawPath)
 
-#PII Columns are coming from the widgets -->
-if piiColumns != "null_string":
+#PII col nullout
+if piiColumns != "null_string": rawDf = dew_func.nullout_cols(piiColumns=piiColumns, df=bronzeReadyDf)
 
-  rawDf = dew_func.nullout_cols(piiColumns=piiColumns, df=bronzeReadyDf)
-  display(rawDf)
-
-#Add metadata cols - Finished
+#Add metadata cols
 bronzeReadyDf = dew_func.add_bronze_metadata_cols(spark=spark, df=rawDf)
 
-#Execute exactly once the modified dataframe to delta
-dew_func.write_stream_bronze_delta_trigger_once()
+#Bronze write-once
+dew_func.write_stream_bronze_delta_trigger_once(spark=spark, df=bronzeReadyDf, bronzePath=bronzePath, bronzeCheckpoint=bronzeCheckpoint)
 
 # COMMAND ----------
 
-# DBTITLE 1,#Option 2 if we *need* the UDF 
+# DBTITLE 1,#Option 2 if we *need* the UDF for encryption
 #NOTE: Only *if* the encrypted cols need to be decrypted otherwise we'd simply redact the fields (which can't be undone.)
 
-@udf("String")
-def encrypt_col(pii_col):
+# @udf("String")
+# def encrypt_col(pii_col):
   
-  sha_value = hashlib.sha1(pii_col.encode()).hexdigest()
+#   sha_value = hashlib.sha1(pii_col.encode()).hexdigest()
   
-  return sha_value
+#   return sha_value
+
+#read the initial dataframe - Finished
+#rawDf = dew_func.read_stream_raw_autoloader(spark=spark, autoloader_config=autoloader_config, rawPath=rawPath)
 
 #PII Columns are coming from the widgets -->
-if piiColumns != "null_string":
+# if piiColumns != "null_string":
 
-  pii_cols = piiColumns.replace(' ', '').split(',')
+#   pii_cols = piiColumns.replace(' ', '').split(',')
 
-  for c in pii_cols:
-    df = bronzeReadyDf.withColumn(c, coalesce(c, lit('null'))).withColumn(c, encrypt_col(c))
+#   for c in pii_cols:
+#     bronzeReadyDf = bronzeReadyDf.withColumn(c, coalesce(c, lit('null'))).withColumn(c, encrypt_col(c))
 
-  display(df)
+#Add metadata cols - Finished
+#bronzeReadyDf = dew_func.add_bronze_metadata_cols(spark=spark, df=rawDf)
 
-# COMMAND ----------
-
-# write to bronze delta table
-# write_stream_bronze_delta_trigger_once(spark = spark
-#                                        , df = bronzeReadyDf
-#                                        , bronzePath = bronzePath
-#                                        , bronzeCheckpoint = bronzeCheckpoint
-#                                        , mergeSchema = "true"
-#                                        , mode = "append")
+#Execute exactly once the modified dataframe to delta
+#dew_func.write_stream_bronze_delta_trigger_once()
