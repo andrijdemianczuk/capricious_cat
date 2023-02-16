@@ -8,7 +8,7 @@
 dbutils.widgets.text("lib_loc", "/Workspace/Repos/", "DEW Module Location")
 
 dbutils.widgets.text("source", "caseware", "Source")
-dbutils.widgets.text("sourceFolderPath", "/caseware/*/am", "Source Path")
+dbutils.widgets.text("sourceFolderPath", "caseware/*/am", "Source Path")
 dbutils.widgets.text("sourceDataset", "*am*.csv", "Source Dataset")
 dbutils.widgets.text("sourceOriginalFormat", "csv", "Source Original Format")
 dbutils.widgets.text("targetDatabase", "caseware_bronze", "Target Database")
@@ -87,18 +87,18 @@ bronzeCheckpoint       = basePath + f"/bronze/{targetPath}/{targetDataset}/_chec
 
 # DBTITLE 1,Set once the autoloader configuration as a dictionary
 autoloader_config = {
-  "cloudFiles.format": rawPath,
-  "cloudFiles.connectionString": dbutils.secrets.get(scope="AzureKeyVault",key="DatabricksAutoloaderSasKeyConnectionString"),
-  "cloudFiles.resourceGroup": dbutils.secrets.get(scope="AzureKeyVault",key="AnalyticsPlatformResourceGroup"),
-  "cloudFiles.subscriptionId": dbutils.secrets.get(scope="AzureKeyVault",key="SubscriptionId"),
-  "cloudFiles.tenantId": dbutils.secrets.get(scope="AzureKeyVaultAAD",key="DatabricksAdlsTenantId"),
-  "cloudFiles.clientId": dbutils.secrets.get(scope="AzureKeyVaultAAD",key="DatabricksAdlsAppId"),
-  "cloudFiles.clientSecret": dbutils.secrets.get(scope="AzureKeyVaultAAD",key="DatabricksAdlsSecret"), 
+  "cloudFiles.format": sourceOriginalFormat,
+#   "cloudFiles.connectionString": dbutils.secrets.get(scope="AzureKeyVault",key="DatabricksAutoloaderSasKeyConnectionString"),
+#   "cloudFiles.resourceGroup": dbutils.secrets.get(scope="AzureKeyVault",key="AnalyticsPlatformResourceGroup"),
+#   "cloudFiles.subscriptionId": dbutils.secrets.get(scope="AzureKeyVault",key="SubscriptionId"),
+#   "cloudFiles.tenantId": dbutils.secrets.get(scope="AzureKeyVaultAAD",key="DatabricksAdlsTenantId"),
+#   "cloudFiles.clientId": dbutils.secrets.get(scope="AzureKeyVaultAAD",key="DatabricksAdlsAppId"),
+#   "cloudFiles.clientSecret": dbutils.secrets.get(scope="AzureKeyVaultAAD",key="DatabricksAdlsSecret"), 
   "cloudFiles.includeExistingFiles": "true",
-  "cloudFiles.schemaLocation": bronzePath,
+#   "cloudFiles.schemaLocation": bronzePath,
   "cloudFiles.inferColumnTypes": "false",
   "cloudFiles.schemaEvolutionMode": "rescue",
-  "cloudFiles.useNotifications": "true"
+#   "cloudFiles.useNotifications": "true"
   }
 
 # COMMAND ----------
@@ -121,18 +121,60 @@ autoloader_config = {
 
 # COMMAND ----------
 
+# DBTITLE 1,DEBUG
+inputPath = "/FileStore/tmp/"
+
+schema = (spark.read
+  .format("csv")
+  .option("mode", "PERMISSIVE")
+  .options(header='true', inferSchema='true')
+  .load("dbfs:/FileStore/tmp/Humidity_data_000687ee_a8d9_4ff2_8259_261a7fc1a062.csv")
+).schema
+
+# COMMAND ----------
+
+# DBTITLE 1,DEBUG
+# df = (spark.readStream
+#   .format("cloudFiles")
+#   .schema(schema)
+#   .option("cloudFiles.format", "csv")
+#   .option("maxFilesPerTrigger", 1)
+#   .load(inputPath))
+
+# df.isStreaming
+
+# COMMAND ----------
+
+# DBTITLE 1,DEBUG
+# display(df)
+
+# COMMAND ----------
+
+# DBTITLE 1,DEBUG
+rawDf = dew_func.read_stream_raw_autoloader(spark=spark, autoloader_config=autoloader_config, rawPath=inputPath, schema=schema)
+
+# COMMAND ----------
+
+rawDf.isStreaming
+
+# COMMAND ----------
+
+display(rawDf)
+
+# COMMAND ----------
+
 # DBTITLE 1,#Option1 Load, redact and write the feed - using nullout in lieu of sha1 per row
-#Read stream
-rawDf = dew_func.read_stream_raw_autoloader(spark=spark, autoloader_config=autoloader_config, rawPath=rawPath)
+# #Read stream
+# rawDf = dew_func.read_stream_raw_autoloader(spark=spark, autoloader_config=autoloader_config, rawPath=rawPath)
 
-#PII col nullout
-if piiColumns != "null_string": rawDf = dew_func.nullout_cols(piiColumns=piiColumns, df=rawDf)
+# #PII col nullout
+# if piiColumns != "null_string": rawDf = dew_func.nullout_cols(piiColumns=piiColumns, df=rawDf)
 
-#Add metadata cols
-bronzeReadyDf = dew_func.add_bronze_metadata_cols(spark=spark, df=rawDf)
+# #Add metadata cols
+# bronzeReadyDf = dew_func.add_bronze_metadata_cols(spark=spark, df=rawDf)
 
-#Bronze write-once
-dew_func.write_stream_bronze_delta_trigger_once(spark=spark, df=bronzeReadyDf, bronzePath=bronzePath, bronzeCheckpoint=bronzeCheckpoint)
+# #Bronze write-once
+# dew_func.write_stream_bronze_delta_trigger_once(spark=spark, df=bronzeReadyDf, bronzePath=bronzePath, bronzeCheckpoint=bronzeCheckpoint)
 
 # COMMAND ----------
 

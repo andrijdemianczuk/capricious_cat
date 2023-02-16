@@ -14,11 +14,29 @@ class DewFn(DewStream):
   def read_stream_raw_autoloader(self, 
     spark="{spark_context}", 
     autoloader_config:dict={}, 
-    rawPath:str=""):
+    rawPath:str="",
+    schema:str=""):
     
-    return super().read_stream_raw_autoloader(spark=spark, 
+    df =  (super().read_stream_raw_autoloader(spark=spark, 
       autoloader_config=autoloader_config, 
-      rawPath=rawPath)
+      rawPath=rawPath, schema=schema))
+
+    # if (schema!=""):
+    #     df = (spark
+    #         .readStream
+    #         .format("cloudFiles")
+    #         .schema(schema)
+    #         .option("maxFilesPerTrigger", 1)
+    #         .options(**autoloader_config)
+    #         .load(rawPath))
+    # else:
+    #     df = (spark
+    #         .readStream
+    #         .format("cloudFiles")
+    #         .options(**autoloader_config)
+    #         .load(rawPath))
+
+    return df
 
 
   def  write_stream_bronze_delta_trigger_once(self, 

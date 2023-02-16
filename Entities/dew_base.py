@@ -9,13 +9,31 @@ class DewStream(ABC):
   def read_stream_raw_autoloader(self, 
     spark="{spark_context}", 
     autoloader_config:dict={}, 
-    rawPath:str=""):
+    rawPath:str="",
+    schema:str=""):
     
-    return (spark
-      .readStream
-      .format("cloudFiles")
-      .options(**autoloader_config)
-      .load(rawPath))
+    # return (spark
+    #   .readStream
+    #   .format("cloudFiles")
+    #   .options(**autoloader_config)
+    #   .load(rawPath))
+
+    if (schema!=""):
+        df = (spark
+            .readStream
+            .format("cloudFiles")
+            .schema(schema)
+            .option("maxFilesPerTrigger", 1)
+            .options(**autoloader_config)
+            .load(rawPath))
+    else:
+        df = (spark
+            .readStream
+            .format("cloudFiles")
+            .options(**autoloader_config)
+            .load(rawPath))
+
+    return df
 
 
   @abstractmethod
