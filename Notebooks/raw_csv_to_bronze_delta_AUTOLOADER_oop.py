@@ -136,17 +136,13 @@ rawDf = dew_func.read_stream_raw_autoloader(spark=spark, autoloader_config=autol
 # rawDf = dew_func.read_stream_raw_autoloader(spark=spark, autoloader_config=autoloader_config, rawPath=rawPath)
 
 # #PII col nullout
-#if piiColumns != "null_string": rawDf = dew_func.nullout_cols(piiColumns=piiColumns, df=rawDf)
+if piiColumns != "null_string": rawDf = dew_func.nullout_cols(piiColumns=piiColumns, df=rawDf)
 
 # #Add metadata cols
-#bronzeReadyDf = dew_func.add_bronze_metadata_cols(spark=spark, df=rawDf)
+bronzeReadyDf = dew_func.add_bronze_metadata_cols(spark=spark, df=rawDf)
 
 # #Bronze write-once
 # dew_func.write_stream_bronze_delta_trigger_once(spark=spark, df=bronzeReadyDf, bronzePath=bronzePath, bronzeCheckpoint=bronzeCheckpoint)
-
-# COMMAND ----------
-
-display(rawDf)
 
 # COMMAND ----------
 
