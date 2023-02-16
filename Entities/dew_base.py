@@ -46,10 +46,12 @@ class DewStream(ABC):
     mergeSchema:str="true",
     mode:str="append"):
     
-    return (df.writeStream.partitionby(key)
-            .format("delta")
-            .option("checkpointlocation", bronzeCheckpoint)
-            .option("mergeSchema", mergeSchema)
-            .outputmMode(mode)
-            .trigger("once")
-            .start(bronzePath))
+    df = (df.writeStream.partitionby(key)
+        .format("delta")
+        .option("checkpointlocation", bronzeCheckpoint)
+        .option("mergeSchema", mergeSchema)
+        .outputmMode(mode)
+        .trigger("once")
+        .start(bronzePath))
+    
+    return df

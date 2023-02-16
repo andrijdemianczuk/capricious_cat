@@ -48,13 +48,15 @@ class DewFn(DewStream):
     mergeSchema:str="true", 
     mode:str="append"):
     
-    return super().write_stream_bronze_delta_trigger_once(spark=spark, 
-      df=df, 
-      key=key, 
-      bronzePath=bronzePath,
-      bronzeCheckpoint=bronzeCheckpoint, 
-      mergeSchema=mergeSchema, 
-      mode=mode)
+    df = (super().write_stream_bronze_delta_trigger_once(spark=spark, 
+        df=df, 
+        key=key, 
+        bronzePath=bronzePath,
+        bronzeCheckpoint=bronzeCheckpoint, 
+        mergeSchema=mergeSchema, 
+        mode=mode))
+
+    return df 
 
 
   ########### EXTENDING THE BASE CLASS WITH NEW METHODS

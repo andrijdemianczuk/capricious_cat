@@ -48,32 +48,9 @@ import dew
 
 # COMMAND ----------
 
-# DBTITLE 1,DEBUG - reload the module during development
-# import importlib
-# importlib.reload(dew)
-
-# dew_func = dew.DewFn()
-
-# COMMAND ----------
-
 # DBTITLE 1,Instance the derived class
 #Create a new instance of the derived class which inherits the base class functions too
 dew_func = dew.DewFn()
-
-# COMMAND ----------
-
-# DBTITLE 1,DEBUG - test dataframe
-# columns = ["language","users_count"]
-# data = [("Java", "20000"), ("Python", "100000"), ("Scala", "3000")]
-
-# dfFromData2 = spark.createDataFrame(data).toDF(*columns)
-
-# COMMAND ----------
-
-# DBTITLE 1,DEBUG - test to see if the dataframe reference is being passed
-# bronzeReadyDf = dew_func.add_bronze_metadata_cols(spark, dfFromData2)
-
-# display(bronzeReadyDf)
 
 # COMMAND ----------
 
@@ -88,17 +65,17 @@ bronzeCheckpoint       = basePath + f"/bronze/{targetPath}/{targetDataset}/_chec
 # DBTITLE 1,Set once the autoloader configuration as a dictionary
 autoloader_config = {
   "cloudFiles.format": sourceOriginalFormat,
-#   "cloudFiles.connectionString": dbutils.secrets.get(scope="AzureKeyVault",key="DatabricksAutoloaderSasKeyConnectionString"),
-#   "cloudFiles.resourceGroup": dbutils.secrets.get(scope="AzureKeyVault",key="AnalyticsPlatformResourceGroup"),
-#   "cloudFiles.subscriptionId": dbutils.secrets.get(scope="AzureKeyVault",key="SubscriptionId"),
-#   "cloudFiles.tenantId": dbutils.secrets.get(scope="AzureKeyVaultAAD",key="DatabricksAdlsTenantId"),
-#   "cloudFiles.clientId": dbutils.secrets.get(scope="AzureKeyVaultAAD",key="DatabricksAdlsAppId"),
-#   "cloudFiles.clientSecret": dbutils.secrets.get(scope="AzureKeyVaultAAD",key="DatabricksAdlsSecret"), 
+  "cloudFiles.connectionString": dbutils.secrets.get(scope="AzureKeyVault",key="DatabricksAutoloaderSasKeyConnectionString"),
+  "cloudFiles.resourceGroup": dbutils.secrets.get(scope="AzureKeyVault",key="AnalyticsPlatformResourceGroup"),
+  "cloudFiles.subscriptionId": dbutils.secrets.get(scope="AzureKeyVault",key="SubscriptionId"),
+  "cloudFiles.tenantId": dbutils.secrets.get(scope="AzureKeyVaultAAD",key="DatabricksAdlsTenantId"),
+  "cloudFiles.clientId": dbutils.secrets.get(scope="AzureKeyVaultAAD",key="DatabricksAdlsAppId"),
+  "cloudFiles.clientSecret": dbutils.secrets.get(scope="AzureKeyVaultAAD",key="DatabricksAdlsSecret"), 
   "cloudFiles.includeExistingFiles": "true",
-#   "cloudFiles.schemaLocation": bronzePath,
+  "cloudFiles.schemaLocation": bronzePath,
   "cloudFiles.inferColumnTypes": "false",
   "cloudFiles.schemaEvolutionMode": "rescue",
-#   "cloudFiles.useNotifications": "true"
+  "cloudFiles.useNotifications": "true"
   }
 
 # COMMAND ----------
@@ -122,14 +99,15 @@ autoloader_config = {
 # COMMAND ----------
 
 # DBTITLE 1,DEBUG
-inputPath = "/FileStore/tmp/"
+# inputPath = "/FileStore/tmp/"
+# bronzeCheckpoint = "/FileStore/tmp/_checkpoint"
 
-schema = (spark.read
-  .format("csv")
-  .option("mode", "PERMISSIVE")
-  .options(header='true', inferSchema='true')
-  .load("dbfs:/FileStore/tmp/Humidity_data_000687ee_a8d9_4ff2_8259_261a7fc1a062.csv")
-).schema
+# schema = (spark.read
+#   .format("csv")
+#   .option("mode", "PERMISSIVE")
+#   .options(header='true', inferSchema='true')
+#   .load("dbfs:/FileStore/tmp/Humidity_data_000687ee_a8d9_4ff2_8259_261a7fc1a062.csv")
+# ).schema
 
 # COMMAND ----------
 
@@ -150,31 +128,21 @@ schema = (spark.read
 
 # COMMAND ----------
 
-# DBTITLE 1,DEBUG
-rawDf = dew_func.read_stream_raw_autoloader(spark=spark, autoloader_config=autoloader_config, rawPath=inputPath, schema=schema)
-
-# COMMAND ----------
-
-rawDf.isStreaming
-
-# COMMAND ----------
-
-display(rawDf)
-
-# COMMAND ----------
-
 # DBTITLE 1,#Option1 Load, redact and write the feed - using nullout in lieu of sha1 per row
 # #Read stream
-# rawDf = dew_func.read_stream_raw_autoloader(spark=spark, autoloader_config=autoloader_config, rawPath=rawPath)
+
+#Used by Andrij for debugging (remove schema=schema if passing the schema loc in options[])
+#rawDf = dew_func.read_stream_raw_autoloader(spark=spark, autoloader_config=autoloader_config, rawPath=rawPath, schema=schema) 
+rawDf = dew_func.read_stream_raw_autoloader(spark=spark, autoloader_config=autoloader_config, rawPath=rawPath)
 
 # #PII col nullout
-# if piiColumns != "null_string": rawDf = dew_func.nullout_cols(piiColumns=piiColumns, df=rawDf)
+if piiColumns != "null_string": rawDf = dew_func.nullout_cols(piiColumns=piiColumns, df=rawDf)
 
 # #Add metadata cols
-# bronzeReadyDf = dew_func.add_bronze_metadata_cols(spark=spark, df=rawDf)
+bronzeReadyDf = dew_func.add_bronze_metadata_cols(spark=spark, df=rawDf)
 
 # #Bronze write-once
-# dew_func.write_stream_bronze_delta_trigger_once(spark=spark, df=bronzeReadyDf, bronzePath=bronzePath, bronzeCheckpoint=bronzeCheckpoint)
+dew_func.write_stream_bronze_delta_trigger_once(spark=spark, df=bronzeReadyDf, bronzePath=bronzePath, bronzeCheckpoint=bronzeCheckpoint)
 
 # COMMAND ----------
 
