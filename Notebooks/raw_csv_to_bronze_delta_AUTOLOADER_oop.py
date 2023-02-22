@@ -107,23 +107,6 @@ schema = (spark.read
 
 # COMMAND ----------
 
-# DBTITLE 1,DEBUG
-# df = (spark.readStream
-#   .format("cloudFiles")
-#   .schema(schema)
-#   .option("cloudFiles.format", "csv")
-#   .option("maxFilesPerTrigger", 1)
-#   .load(inputPath))
-
-# df.isStreaming
-
-# COMMAND ----------
-
-# DBTITLE 1,DEBUG
-# display(df)
-
-# COMMAND ----------
-
 # DBTITLE 1,#Option1 Load, redact and write the feed - using nullout in lieu of sha1 per row
 # #Read stream
 
@@ -138,37 +121,8 @@ if piiColumns != "null_string": rawDf = dew_func.nullout_cols(piiColumns=piiColu
 bronzeReadyDf = dew_func.add_bronze_metadata_cols(spark=spark, df=rawDf)
 
 # #Bronze write-once
-# dew_func.write_stream_bronze_delta_trigger_once(spark=spark, df=bronzeReadyDf, bronzePath=bronzePath, bronzeCheckpoint=bronzeCheckpoint)
+dew_func.write_stream_bronze_delta_trigger_once(spark=spark, df=bronzeReadyDf, bronzePath=bronzePath, bronzeCheckpoint=bronzeCheckpoint)
 
 # COMMAND ----------
 
 display(bronzeReadyDf)
-
-# COMMAND ----------
-
-# DBTITLE 1,#Option 2 if we *need* the UDF for encryption
-#NOTE: Only *if* the encrypted cols need to be decrypted otherwise we'd simply redact the fields (which can't be undone.)
-
-# @udf("String")
-# def encrypt_col(pii_col):
-  
-#   sha_value = hashlib.sha1(pii_col.encode()).hexdigest()
-  
-#   return sha_value
-
-#read the initial dataframe - Finished
-#rawDf = dew_func.read_stream_raw_autoloader(spark=spark, autoloader_config=autoloader_config, rawPath=rawPath)
-
-#PII Columns are coming from the widgets -->
-# if piiColumns != "null_string":
-
-#   pii_cols = piiColumns.replace(' ', '').split(',')
-
-#   for c in pii_cols:
-#     bronzeReadyDf = bronzeReadyDf.withColumn(c, coalesce(c, lit('null'))).withColumn(c, encrypt_col(c))
-
-#Add metadata cols - Finished
-#bronzeReadyDf = dew_func.add_bronze_metadata_cols(spark=spark, df=rawDf)
-
-#Execute exactly once the modified dataframe to delta
-#dew_func.write_stream_bronze_delta_trigger_once(spark=spark, df=bronzeReadyDf, bronzePath=bronzePath, bronzeCheckpoint=bronzeCheckpoint)
