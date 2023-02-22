@@ -45,3 +45,16 @@ df.isStreaming
 # COMMAND ----------
 
 display(df)
+
+# COMMAND ----------
+
+# MAGIC %fs
+# MAGIC ls /FileStore/tmp
+
+# COMMAND ----------
+
+dbutils.fs.rm("dbfs:/FileStore/tmp/*.csv", True)
+
+# COMMAND ----------
+
+ 

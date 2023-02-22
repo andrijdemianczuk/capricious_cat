@@ -11,12 +11,6 @@ class DewStream(ABC):
     autoloader_config:dict={}, 
     rawPath:str="",
     schema:str=""):
-    
-    # return (spark
-    #   .readStream
-    #   .format("cloudFiles")
-    #   .options(**autoloader_config)
-    #   .load(rawPath))
 
     if (schema!=""):
         df = (spark
@@ -46,12 +40,12 @@ class DewStream(ABC):
     mergeSchema:str="true",
     mode:str="append"):
     
-    df = (df.writeStream.partitionby(key)
+    df = (df.writeStream.partitionBy(key)
         .format("delta")
         .option("checkpointlocation", bronzeCheckpoint)
         .option("mergeSchema", mergeSchema)
-        .outputmMode(mode)
-        .trigger("once")
+        .outputMode(mode)
+        .trigger(once=True)
         .start(bronzePath))
     
     return df

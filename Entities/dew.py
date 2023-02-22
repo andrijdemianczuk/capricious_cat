@@ -17,24 +17,9 @@ class DewFn(DewStream):
     rawPath:str="",
     schema:str=""):
     
-    # df =  (super().read_stream_raw_autoloader(spark=spark, 
-    #   autoloader_config=autoloader_config, 
-    #   rawPath=rawPath, schema=schema))
-
-    if (schema!=""):
-        df = (spark
-            .readStream
-            .format("cloudFiles")
-            .schema(schema)
-            .option("maxFilesPerTrigger", 1)
-            .options(**autoloader_config)
-            .load(rawPath))
-    else:
-        df = (spark
-            .readStream
-            .format("cloudFiles")
-            .options(**autoloader_config)
-            .load(rawPath))
+    df =  (super().read_stream_raw_autoloader(spark=spark, 
+      autoloader_config=autoloader_config, 
+      rawPath=rawPath, schema=schema))
 
     return df
 
@@ -47,22 +32,14 @@ class DewFn(DewStream):
     bronzeCheckpoint:str="/", 
     mergeSchema:str="true", 
     mode:str="append"):
-    
-    df = (df.writeStream.partitionby(key)
-        .format("delta")
-        .option("checkpointlocation", bronzeCheckpoint)
-        .option("mergeSchema", mergeSchema)
-        .outputmMode(mode)
-        .trigger("once")
-        .start(bronzePath))
 
-    # df = (super().write_stream_bronze_delta_trigger_once(spark=spark, 
-    #     df=df, 
-    #     key=key, 
-    #     bronzePath=bronzePath,
-    #     bronzeCheckpoint=bronzeCheckpoint, 
-    #     mergeSchema=mergeSchema, 
-    #     mode=mode))
+    df = (super().write_stream_bronze_delta_trigger_once(spark=spark, 
+        df=df, 
+        key=key, 
+        bronzePath=bronzePath,
+        bronzeCheckpoint=bronzeCheckpoint, 
+        mergeSchema=mergeSchema, 
+        mode=mode))
 
     return df 
 

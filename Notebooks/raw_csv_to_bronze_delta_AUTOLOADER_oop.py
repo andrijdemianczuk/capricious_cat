@@ -54,6 +54,10 @@ dew_func = dew.DewFn()
 
 # COMMAND ----------
 
+dew_func.read_stream_raw_autoloader()
+
+# COMMAND ----------
+
 # DBTITLE 1,Set the notebook parameters
 basePath = "dbfs:/mnt/lake"
 rawPath                = basePath + f"/raw/{sourcePath}/{sourceDataset}"
@@ -91,7 +95,7 @@ autoloader_config = {
 # COMMAND ----------
 
 # DBTITLE 1,DEBUG
-inputPath = "/FileStore/tmp/"
+rawPath = "/FileStore/tmp/"
 bronzeCheckpoint = "/FileStore/tmp/_checkpoint"
 
 schema = (spark.read
@@ -138,7 +142,7 @@ bronzeReadyDf = dew_func.add_bronze_metadata_cols(spark=spark, df=rawDf)
 
 # COMMAND ----------
 
-# display(bronzeReadyDf)
+display(bronzeReadyDf)
 
 # COMMAND ----------
 
